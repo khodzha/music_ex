@@ -175,15 +175,22 @@ defmodule Discord.Gateway.VoiceState do
       packet = Discord.Gateway.VoiceEncoder.encrypt_packet(frame, header, state.secret_key)
       {header <> packet, seq}
     end)
-    |> Enum.each(fn {full_packet, seq} ->
+    |> Enum.reduce(:os.system_time(:milli_seconds), fn {full_packet, seq}, elapsed ->
+
       if rem(seq, 1500) == 0 do
         Task.async(fn ->
           IO.puts(seq)
           speaking(state.voice_gateway, true)
         end)
       end
-      Socket.Datagram.send(state.udp_listener, full_packet, {state.udp_endpoint, state.port})
-      :timer.sleep(18)
+      Socket.Datagram.send!(state.udp_listener, full_packet, {state.udp_endpoint, state.port})
+
+      sleep_time = case elapsed - :os.system_time(:milli_seconds) + 20 do
+        x when x < 0 -> 0
+        x -> x
+      end
+      :timer.sleep(sleep_time)
+      elapsed + 20
     end)
 
     speaking(state.voice_gateway, false)

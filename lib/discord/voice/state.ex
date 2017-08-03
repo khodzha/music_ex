@@ -1,5 +1,8 @@
-defmodule Discord.Gateway.VoiceState do
+defmodule Discord.Voice.State do
   use GenServer
+
+  alias Discord.Voice.Gateway, as: VoiceGateway
+  alias Discord.Voice.Encoder
 
   def start_link do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -34,8 +37,16 @@ defmodule Discord.Gateway.VoiceState do
     GenServer.call(__MODULE__, :try_connect)
   end
 
-  def play(file) do
-    GenServer.cast(__MODULE__, {:play ,file})
+  def speaking(value) do
+    GenServer.cast(__MODULE__, {:speaking, value})
+  end
+
+  def send_packet(packet) do
+    GenServer.call(__MODULE__, {:send_packet, packet})
+  end
+
+  def encode(frame, seq) do
+    GenServer.call(__MODULE__, {:encode_packet, frame, seq})
   end
 
   def init(:ok) do
@@ -69,9 +80,9 @@ defmodule Discord.Gateway.VoiceState do
     end)
 
     if all_keys_present do
-      {:ok, pid} = Discord.VoiceGateway.start_link(state.endpoint)
+      {:ok, pid} = VoiceGateway.start_link(state.endpoint)
       state = Map.put(state, :voice_gateway, pid)
-      Discord.VoiceGateway.send_frame(state.voice_gateway, %{
+      VoiceGateway.send_frame(state.voice_gateway, %{
         "op" => 0,
         "d" => %{
           "server_id" => state.server_id,
@@ -100,7 +111,7 @@ defmodule Discord.Gateway.VoiceState do
 
     {our_ip, our_port} = ip_and_port_discovery(state)
 
-    Discord.VoiceGateway.send_frame(state.voice_gateway, %{
+    VoiceGateway.send_frame(state.voice_gateway, %{
       "op" => 1,
       "d" => %{
         "protocol" => "udp",
@@ -132,15 +143,20 @@ defmodule Discord.Gateway.VoiceState do
     {:reply, :ok, state}
   end
 
-  def handle_cast({:play, file}, state) do
-    Task.async(fn ->
-      play(state, file)
-    end)
+  def handle_call({:encode_packet, frame, seq}, _from, state) do
+    header = Encoder.rtp_header(seq, state.ssrc)
+    packet = Encoder.encrypt_packet(frame, header, state.secret_key)
+    final_packet = header <> packet
 
-    {:noreply, state}
+    {:reply, final_packet, state}
   end
 
-  # TODO: something is wrong with hearbeats here
+  def handle_call({:send_packet, packet}, _from, state) do
+    response = Socket.Datagram.send!(state.udp_listener, packet, {state.udp_endpoint, state.port})
+    {:reply, response, state}
+  end
+
+  # use heartbeat_interval from op8, not op2
   def handle_cast(:send_heartbeat, state) do
     Process.send_after(self(), {:"$gen_cast", :send_heartbeat}, state.heartbeat_interval)
 
@@ -153,49 +169,16 @@ defmodule Discord.Gateway.VoiceState do
     {:noreply, state}
   end
 
-  defp speaking(gateway, speaking_flag) do
-    Discord.VoiceGateway.send_frame(gateway, %{
+  def handle_cast({:speaking, value}, state) do
+    VoiceGateway.send_frame(state.voice_gateway, %{
       "op" => 5,
       "d" => %{
-        "speaking" => speaking_flag,
+        "speaking" => value,
         "delay" => 0
       }
     })
-  end
 
-  defp play(state, file) do
-    IO.puts("started playing #{inspect DateTime.utc_now()}")
-
-    speaking(state.voice_gateway, true)
-
-    Discord.Gateway.VoiceEncoder.encode(file)
-    |> Stream.with_index
-    |> Enum.map(fn {frame, seq} ->
-      header = Discord.Gateway.VoiceEncoder.rtp_header(seq, state.ssrc)
-      packet = Discord.Gateway.VoiceEncoder.encrypt_packet(frame, header, state.secret_key)
-      {header <> packet, seq}
-    end)
-    |> Enum.reduce(:os.system_time(:milli_seconds), fn {full_packet, seq}, elapsed ->
-
-      if rem(seq, 1500) == 0 do
-        Task.async(fn ->
-          IO.puts(seq)
-          speaking(state.voice_gateway, true)
-        end)
-      end
-      Socket.Datagram.send!(state.udp_listener, full_packet, {state.udp_endpoint, state.port})
-
-      sleep_time = case elapsed - :os.system_time(:milli_seconds) + 20 do
-        x when x < 0 -> 0
-        x -> x
-      end
-      :timer.sleep(sleep_time)
-      elapsed + 20
-    end)
-
-    speaking(state.voice_gateway, false)
-
-    IO.puts("finished playing #{inspect DateTime.utc_now()}")
+    {:noreply, state}
   end
 
   defp ip_and_port_discovery(state) do

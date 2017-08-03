@@ -8,7 +8,9 @@ defmodule MusicEx.Supervisor do
   def init(:ok) do
     children = [
       worker(Playlist.Store, []),
-      supervisor(Playlist.Supervisor, [])
+      supervisor(Playlist.Supervisor, []),
+      worker(Discord.Gateway.State, []),
+      worker(Player, [])
     ]
 
     supervise(children, strategy: :one_for_one)

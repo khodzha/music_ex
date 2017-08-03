@@ -1,7 +1,7 @@
 defmodule Discord.Gateway.State do
   use GenServer
   alias Discord.Gateway
-  alias Discord.Gateway.VoiceState
+  alias Discord.Voice.State, as: VoiceState
 
   @guild_id     Application.get_env(:music_ex, :guild_id)
   @channel_id   Application.get_env(:music_ex, :channel_id)
@@ -55,7 +55,7 @@ defmodule Discord.Gateway.State do
   # тут нужно сделать супервайзер, пушо нам не надо, чтоб при падении вебсокетной херни падал стэйт соединения
   def init(:ok) do
     {:ok, pid} = Gateway.start_link
-    {:ok, voice_pid} = Discord.Gateway.VoiceState.start_link
+    {:ok, voice_pid} = VoiceState.start_link
     {:ok, %{gateway: pid, voice: voice_pid}}
   end
 
@@ -133,7 +133,25 @@ defmodule Discord.Gateway.State do
   end
 
   def handle_cast({:new_message, %{"content" => "!play " <> file}}, state) do
-    VoiceState.play(file)
+    Player.play(file)
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:new_message, %{"content" => "!stop"}}, state) do
+    Player.stop_playing()
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:new_message, %{"content" => "!pause"}}, state) do
+    Player.pause()
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:new_message, %{"content" => "!unpause"}}, state) do
+    Player.unpause()
 
     {:noreply, state}
   end
@@ -146,7 +164,7 @@ defmodule Discord.Gateway.State do
     Process.send_after(self(), {:"$gen_cast", :send_heartbeat}, state.heartbeat_interval)
 
     hb_seq = Map.get(state, :hb_seq)
-    Discord.Gateway.send_frame(state.gateway, %{
+    Gateway.send_frame(state.gateway, %{
       "op" => 1,
       "d" => hb_seq
     })

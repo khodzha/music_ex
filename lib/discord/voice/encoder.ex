@@ -1,4 +1,4 @@
-defmodule Discord.Gateway.VoiceEncoder do
+defmodule Discord.Voice.Encoder do
   def encode(file) do
     {data, 0} = System.cmd("dca-rs", ["-i", file, "-b", "64"])
     <<"DCA1", json_len::little-signed-32, _json::binary-size(json_len), opus_data::binary>> = data

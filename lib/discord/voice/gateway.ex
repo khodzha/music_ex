@@ -1,6 +1,6 @@
-defmodule Discord.VoiceGateway do
+defmodule Discord.Voice.Gateway do
   use WebSockex
-  alias Discord.Gateway.VoiceState
+  alias Discord.Voice.State, as: VoiceState
 
   def start_link(url) do
     WebSockex.start_link(url, __MODULE__, %{})

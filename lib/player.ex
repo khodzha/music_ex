@@ -4,6 +4,8 @@ defmodule Player do
   alias Discord.Voice.State, as: VoiceState
   alias Discord.Voice.Encoder
 
+  @silence <<0xF8, 0xFF, 0xFE>>
+
   def start_link do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
@@ -28,9 +30,8 @@ defmodule Player do
     {:ok, %{}}
   end
 
-  def handle_cast({:play, file}, state) do
-    play_file(file)
-
+  def handle_cast({:play, request}, state) do
+    play_youtube(request)
     {:noreply, state}
   end
 
@@ -48,6 +49,30 @@ defmodule Player do
     state = Map.put(state, :paused, false)
     start_playing(state.packets)
     {:noreply, state}
+  end
+
+  def download_from_youtube(request) do
+    query = URI.encode_www_form(request)
+    {json_output, 0} = System.cmd(
+      "youtube-dl", [
+        "--print-json",
+        "--id",
+        "-q",
+        "-w",
+        "-f",
+        "bestaudio",
+        "--playlist-items",
+        "1",
+        "https://www.youtube.com/results?search_query=#{query}&page=1"
+      ]
+    )
+    Poison.decode!(json_output)["_filename"]
+  end
+
+  defp play_youtube(request) do
+    filename = download_from_youtube(request)
+
+    play_file(filename)
   end
 
   defp play_file(file) do

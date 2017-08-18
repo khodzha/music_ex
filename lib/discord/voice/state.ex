@@ -132,6 +132,7 @@ defmodule Discord.Voice.State do
     |> :erlang.list_to_binary
 
     state = Map.put(state, :secret_key, secret_key)
+    Discord.API.Message.create("Voice connected")
 
     {:reply, :ok, state}
   end

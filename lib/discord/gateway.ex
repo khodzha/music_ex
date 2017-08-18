@@ -1,6 +1,6 @@
 defmodule Discord.Gateway do
   use WebSockex
-  alias Discord.Gateway.Url
+  alias Discord.API.Url
   alias Discord.Gateway.State
 
   def start_link do

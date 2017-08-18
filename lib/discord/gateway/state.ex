@@ -3,9 +3,9 @@ defmodule Discord.Gateway.State do
   alias Discord.Gateway
   alias Discord.Voice.State, as: VoiceState
 
-  @guild_id     Application.get_env(:music_ex, :guild_id)
-  @channel_id   Application.get_env(:music_ex, :channel_id)
-  @self_user_id Application.get_env(:music_ex, :self_user_id)
+  @guild_id         Application.get_env(:music_ex, :guild_id)
+  @voice_channel_id Application.get_env(:music_ex, :voice_channel_id)
+  @self_user_id     Application.get_env(:music_ex, :self_user_id)
 
   def start_link do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -67,7 +67,7 @@ defmodule Discord.Gateway.State do
     Discord.Gateway.send_frame(state.gateway, %{
       "op" => 2,
       "d" => %{
-        "token" => Discord.Gateway.Url.bot_token(),
+        "token" => Discord.API.Url.bot_token(),
         "properties" => %{
           "$os" => "linux",
           "$browser" => "khodzha/music_ex",
@@ -89,7 +89,7 @@ defmodule Discord.Gateway.State do
       "op" => 4,
       "d" => %{
         "guild_id": @guild_id,
-        "channel_id": @channel_id,
+        "channel_id": @voice_channel_id,
         "self_mute": false,
         "self_deaf": true
       }

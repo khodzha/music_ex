@@ -1,4 +1,4 @@
-defmodule Discord.Gateway.Url do
+defmodule Discord.API.Url do
   @api_version 6
 
   def get_gateway_url do
@@ -14,7 +14,7 @@ defmodule Discord.Gateway.Url do
   end
 
   def base_url do
-    "https://discordapp.com/api"
+    "https://discordapp.com/api/v#{@api_version}"
   end
 
   def bot_token do

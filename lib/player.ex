@@ -77,7 +77,7 @@ defmodule Player do
     |> play_packets()
   end
 
-  defp encode_packets(filename) do
+  defp encode_packets(file) do
     Encoder.encode(file)
     |> Stream.with_index()
     |> Enum.map(fn {frame, seq} ->
@@ -86,6 +86,7 @@ defmodule Player do
   end
 
   defp play_packets(packets) do
+    Discord.API.Message.create("Started playing")
     VoiceState.speaking(true)
     elapsed = :os.system_time(:milli_seconds)
     send(self(), {:play_loop, packets, 0, elapsed})
@@ -95,10 +96,12 @@ defmodule Player do
     cond do
       Map.get(state, :stopped) ->
         state = Map.delete(state, :stopped)
+        send_silence(seq+1)
         {:noreply, state}
 
       Map.get(state, :paused) ->
         state = Map.put(state, :packets, rest)
+        send_silence(seq+1)
         {:noreply, state}
 
       true ->
@@ -124,6 +127,7 @@ defmodule Player do
   end
 
   def handle_info({:play_loop, [], seq, _elapsed}, state) do
+    Discord.API.Message.create("Finished playing")
     send_silence(seq+1)
     {:noreply, state}
   end
@@ -133,7 +137,6 @@ defmodule Player do
     {:noreply, state}
   end
   def handle_info({:silence, seq, frames_left}, state) do
-    VoiceState.speaking(false)
     Process.send_after(self(), {:silence, seq+1, frames_left-1}, @default_ms)
     {:noreply, state}
   end

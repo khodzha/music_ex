@@ -5,6 +5,7 @@ defmodule Player do
   alias Discord.Voice.Encoder
 
   @silence <<0xF8, 0xFF, 0xFE>>
+  @default_ms 20
 
   def start_link do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
@@ -47,7 +48,7 @@ defmodule Player do
 
   def handle_cast(:unpause, state) do
     state = Map.put(state, :paused, false)
-    start_playing(state.packets)
+    play_packets(state.packets)
     {:noreply, state}
   end
 
@@ -70,26 +71,24 @@ defmodule Player do
   end
 
   defp play_youtube(request) do
-    filename = download_from_youtube(request)
-
-    play_file(filename)
+    request
+    |> download_from_youtube()
+    |> encode_packets()
+    |> play_packets()
   end
 
-  defp play_file(file) do
+  defp encode_packets(filename) do
     Encoder.encode(file)
     |> Stream.with_index()
     |> Enum.map(fn {frame, seq} ->
       VoiceState.encode(frame, seq)
     end)
-    |> start_playing()
   end
 
-  defp start_playing(packets) do
+  defp play_packets(packets) do
     VoiceState.speaking(true)
     elapsed = :os.system_time(:milli_seconds)
     send(self(), {:play_loop, packets, 0, elapsed})
-
-    VoiceState.speaking(false)
   end
 
   def handle_info({:play_loop, [packet | rest], seq, elapsed}, state) do
@@ -112,11 +111,11 @@ defmodule Player do
 
         VoiceState.send_packet(packet)
 
-        sleep_time = case elapsed - :os.system_time(:milli_seconds) + 20 do
+        sleep_time = case elapsed - :os.system_time(:milli_seconds) + @default_ms do
           x when x < 0 -> 0
           x -> x
         end
-        Process.send_after(self(), {:play_loop, rest, seq+1, elapsed+20}, sleep_time)
+        Process.send_after(self(), {:play_loop, rest, seq+1, elapsed + @default_ms}, sleep_time)
 
         state = Map.put(state, :packets, rest)
 
@@ -124,8 +123,23 @@ defmodule Player do
     end
   end
 
-  def handle_info({:play_loop, [], _seq, _elapsed}, state) do
+  def handle_info({:play_loop, [], seq, _elapsed}, state) do
+    send_silence(seq+1)
+    {:noreply, state}
+  end
+
+  def handle_info({:silence, _seq, 0}, state) do
     VoiceState.speaking(false)
     {:noreply, state}
+  end
+  def handle_info({:silence, seq, frames_left}, state) do
+    VoiceState.speaking(false)
+    Process.send_after(self(), {:silence, seq+1, frames_left-1}, @default_ms)
+    {:noreply, state}
+  end
+
+  defp send_silence(seq) do
+    VoiceState.encode(@silence, seq)
+    Process.send_after(self(), {:silence, seq+1, 5}, @default_ms)
   end
 end

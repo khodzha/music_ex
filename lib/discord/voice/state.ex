@@ -138,9 +138,9 @@ defmodule Discord.Voice.State do
   end
 
   def handle_call({:heartbeat_interval, hb_interval}, _from, state) do
-    state = Map.put(state, :heartbeat_interval, hb_interval)
+    state = Map.put(state, :heartbeat_interval, div(3*hb_interval, 4))
 
-    Process.send_after(self(), {:"$gen_cast", :send_heartbeat}, hb_interval)
+    Process.send_after(self(), :send_heartbeat, state.heartbeat_interval)
     {:reply, :ok, state}
   end
 
@@ -157,14 +157,15 @@ defmodule Discord.Voice.State do
     {:reply, response, state}
   end
 
-  # use heartbeat_interval from op8, not op2
-  def handle_cast(:send_heartbeat, state) do
-    Process.send_after(self(), {:"$gen_cast", :send_heartbeat}, state.heartbeat_interval)
+  # use 3/4 heartbeat_interval from op8, not op2
+  # because of bug, see:
+  # https://github.com/hammerandchisel/discord-api-docs/blob/f7693a5b3546ac95d092767afdd159da608dc518/docs/topics/Voice_Connections.md#heartbeating
+  def handle_info(:send_heartbeat, state) do
+    Process.send_after(self(), :send_heartbeat, state.heartbeat_interval)
 
-    hb_seq = Map.get(state, :hb_seq)
     Discord.Gateway.send_frame(state.voice_gateway, %{
       "op" => 3,
-      "d" => hb_seq
+      "d" => :os.system_time(:millisecond)
     })
 
     {:noreply, state}

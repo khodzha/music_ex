@@ -12,7 +12,7 @@ defmodule Discord.Voice.Gateway do
   end
 
   def handle_frame({:text, json}, state) do
-    IO.puts "Received voice -- #{inspect json}"
+    IO.puts "Received voice -- #{inspect json} #{DateTime.utc_now()}"
     process_frame(json)
 
     {:ok, state}
@@ -37,5 +37,10 @@ defmodule Discord.Voice.Gateway do
     [uncompressed | [] ] = :zlib.inflate(z, compressed)
     :zlib.inflateEnd(z)
     uncompressed
+  end
+
+  def handle_disconnect(connection_state, state) do
+    IO.puts("voice gateway disconnect: #{inspect connection_state}")
+    {:reconnect, state}
   end
 end

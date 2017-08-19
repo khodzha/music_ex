@@ -1,6 +1,6 @@
-defmodule MusicBotTest do
+defmodule MusicExTest do
   use ExUnit.Case
-  doctest MusicBot
+  doctest MusicEx
 
   test "the truth" do
     assert 1 + 1 == 2

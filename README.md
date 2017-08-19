@@ -1,4 +1,4 @@
-# MusicBot
+# MusicEx
 
 A [Discord] bot that plays audio from youtube over the voice channel.
 

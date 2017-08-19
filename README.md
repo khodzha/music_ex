@@ -30,5 +30,5 @@ and Linux.
 
 [dca-rs]: https://github.com/nstafie/dca-rs
 [youtube-dl]: https://rg3.github.io/youtube-dl/
-[dca-rs precompiled binaries]: https://github.com/nstafie/dca-rs/releases
+[dca-rs binaries]: https://github.com/nstafie/dca-rs/releases
 [youtube-dl binaries]: https://rg3.github.io/youtube-dl/download.html

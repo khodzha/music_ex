@@ -149,12 +149,6 @@ defmodule Discord.Gateway.State do
     {:noreply, state}
   end
 
-  def handle_cast({:new_message, %{"content" => "!stop"}}, state) do
-    Player.stop_playing()
-
-    {:noreply, state}
-  end
-
   def handle_cast({:new_message, %{"content" => "!pause"}}, state) do
     Player.pause()
 

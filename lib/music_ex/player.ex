@@ -30,10 +30,6 @@ defmodule MusicEx.Player do
     GenServer.cast(__MODULE__, :unpause)
   end
 
-  def stop_playing do
-    GenServer.cast(__MODULE__, :stop)
-  end
-
   def init(:ok) do
     {:ok, %{playlist: Playlist.new(), sending_silence: false}}
   end
@@ -52,11 +48,6 @@ defmodule MusicEx.Player do
       #{s}
       """
     )
-    {:noreply, state}
-  end
-
-  def handle_cast(:stop, state) do
-    state = Map.put(state, :stopped, true)
     {:noreply, state}
   end
 
@@ -125,12 +116,6 @@ defmodule MusicEx.Player do
 
   def handle_info({:play_loop, [packet | rest], seq, elapsed}, state) do
     cond do
-      Map.get(state, :stopped) ->
-        state = Map.delete(state, :stopped)
-        send_silence(seq + 1)
-        pl = %Playlist{state.playlist | now_playing: nil}
-        {:noreply, %{ state | sending_silence: true, playlist: pl }}
-
       Map.get(state, :paused) ->
         state = Map.put(state, :packets, rest)
         send_silence(seq + 1)

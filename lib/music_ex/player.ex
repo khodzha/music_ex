@@ -4,6 +4,8 @@ defmodule MusicEx.Player do
   alias Discord.Gateway.State
   alias Discord.Voice.State, as: VoiceState
   alias Discord.Voice.Encoder
+  alias MusicEx.Playlist
+  alias MusicEx.Song
 
   @silence <<0xF8, 0xFF, 0xFE>>
   @default_ms 20
@@ -12,8 +14,12 @@ defmodule MusicEx.Player do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  def play(file) do
-    GenServer.cast(__MODULE__, {:play, file})
+  def add_to_playlist(request) do
+    GenServer.cast(__MODULE__, {:add_to_playlist, request})
+  end
+
+  def inspect_playlist do
+    GenServer.cast(__MODULE__, :inspect_playlist)
   end
 
   def pause do
@@ -29,11 +35,23 @@ defmodule MusicEx.Player do
   end
 
   def init(:ok) do
-    {:ok, %{}}
+    {:ok, %{playlist: Playlist.new(), sending_silence: false}}
   end
 
-  def handle_cast({:play, request}, state) do
-    play_youtube(request)
+  def handle_cast({:add_to_playlist, request}, state) do
+    pl = Playlist.push(state.playlist, request)
+    send(self(), :added_to_playlist)
+    {:noreply, %{state | playlist: pl}}
+  end
+
+  def handle_cast(:inspect_playlist, state) do
+    s = Playlist.to_s(state.playlist)
+    Discord.API.Message.create("""
+      Current playlist
+      ==============================================================
+      #{s}
+      """
+    )
     {:noreply, state}
   end
 
@@ -110,12 +128,13 @@ defmodule MusicEx.Player do
       Map.get(state, :stopped) ->
         state = Map.delete(state, :stopped)
         send_silence(seq + 1)
-        {:noreply, state}
+        pl = %Playlist{state.playlist | now_playing: nil}
+        {:noreply, %{ state | sending_silence: true, playlist: pl }}
 
       Map.get(state, :paused) ->
         state = Map.put(state, :packets, rest)
         send_silence(seq + 1)
-        {:noreply, state}
+        {:noreply, %{ state | sending_silence: true }}
 
       true ->
         if rem(seq, 1500) == 0 do
@@ -146,14 +165,17 @@ defmodule MusicEx.Player do
 
   def handle_info({:play_loop, [], seq, _elapsed}, state) do
     Discord.API.Message.create("Finished playing")
+    send(self(), :finished_playing)
     send_silence(seq + 1)
-    {:noreply, state}
+    pl = %Playlist{state.playlist | now_playing: nil}
+    {:noreply, %{state | sending_silence: true, playlist: pl}}
   end
 
   def handle_info({:silence, _seq, 0}, state) do
     VoiceState.speaking(false)
-    {:noreply, state}
+    {:noreply, %{state | sending_silence: false}}
   end
+
   def handle_info({:silence, seq, frames_left}, state) do
     Process.send_after(
       self(),
@@ -163,8 +185,36 @@ defmodule MusicEx.Player do
     {:noreply, state}
   end
 
+  def handle_info({:play, %Song{title: title}}, state) do
+    play_youtube(title)
+    {:noreply, state}
+  end
+
+  def handle_info(:added_to_playlist, state) do
+    playlist = maybe_play(state.playlist)
+    {:noreply, %{state | playlist: playlist}}
+  end
+
+  def handle_info(:finished_playing, %{sending_silence: true} = state) do
+    Process.send_after(self(), :finished_playing, 100)
+    {:noreply, state}
+  end
+
+  def handle_info(:finished_playing, %{sending_silence: false} = state) do
+    playlist = maybe_play(state.playlist)
+    {:noreply, %{state | playlist: playlist}}
+  end
+
   defp send_silence(seq) do
     VoiceState.encode(@silence, seq)
     Process.send_after(self(), {:silence, seq + 1, 5}, @default_ms)
   end
+
+  defp maybe_play(%Playlist{now_playing: nil} = pl) do
+    {song, playlist} = Playlist.play_next(pl)
+    send(self(), {:play, song})
+    playlist
+  end
+
+  defp maybe_play(%Playlist{} = pl), do: pl
 end

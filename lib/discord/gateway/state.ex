@@ -138,8 +138,13 @@ defmodule Discord.Gateway.State do
     {:reply, :ok, state}
   end
 
-  def handle_cast({:new_message, %{"content" => "!play " <> file}}, state) do
-    Player.play(file)
+  def handle_cast({:new_message, %{"content" => "!playlist"}}, state) do
+    Player.inspect_playlist()
+    {:noreply, state}
+  end
+
+  def handle_cast({:new_message, %{"content" => "!play " <> request}}, state) do
+    Player.add_to_playlist(request)
 
     {:noreply, state}
   end

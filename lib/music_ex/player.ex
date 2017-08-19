@@ -150,6 +150,7 @@ defmodule MusicEx.Player do
 
   def handle_info({:play_loop, [], seq, _elapsed}, state) do
     Discord.API.Message.create("Finished playing")
+    State.remove_status()
     send(self(), :finished_playing)
     send_silence(seq + 1)
     pl = %Playlist{state.playlist | now_playing: nil}
@@ -181,7 +182,7 @@ defmodule MusicEx.Player do
   end
 
   def handle_info(:finished_playing, %{sending_silence: true} = state) do
-    Process.send_after(self(), :finished_playing, 100)
+    Process.send_after(self(), :finished_playing, 5 * @default_ms)
     {:noreply, state}
   end
 
@@ -197,7 +198,7 @@ defmodule MusicEx.Player do
 
   defp maybe_play(%Playlist{now_playing: nil} = pl) do
     {song, playlist} = Playlist.play_next(pl)
-    send(self(), {:play, song})
+    unless is_nil(song), do: send(self(), {:play, song})
     playlist
   end
 

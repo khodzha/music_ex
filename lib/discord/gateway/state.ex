@@ -11,6 +11,13 @@ defmodule Discord.Gateway.State do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
+  def set_status(status) do
+    GenServer.cast(__MODULE__, {:set_status, status})
+  end
+  def remove_status do
+    GenServer.cast(__MODULE__, :remove_status)
+  end
+
   def process_message(%{"s" => hb_seq} = msg) do
     GenServer.call(__MODULE__, {:hb_seq, hb_seq})
     do_process_message(msg)
@@ -51,8 +58,6 @@ defmodule Discord.Gateway.State do
     IO.puts "MSG WITHOUT HANDLER: #{inspect msg}"
   end
 
-  # todo:
-  # тут нужно сделать супервайзер, пушо нам не надо, чтоб при падении вебсокетной херни падал стэйт соединения
   def init(:ok) do
     {:ok, pid} = Gateway.start_link
     {:ok, voice_pid} = VoiceState.start_link
@@ -169,6 +174,35 @@ defmodule Discord.Gateway.State do
       "d" => hb_seq
     })
 
+    {:noreply, state}
+  end
+
+  def handle_cast({:set_status, status}, state) do
+    Gateway.send_frame(state.gateway, %{
+      "op" => 3,
+      "d" => %{
+        "since": nil,
+        "status": "online",
+        "game": %{
+          "name": status,
+          "type": 0
+        },
+        "afk": false
+      }
+    })
+    {:noreply, state}
+  end
+
+  def handle_cast(:remove_status, state) do
+    Gateway.send_frame(state.gateway, %{
+      "op" => 3,
+      "d" => %{
+        "since": nil,
+        "game": nil,
+        "afk": false,
+        "status": "online"
+      }
+    })
     {:noreply, state}
   end
 end

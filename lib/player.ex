@@ -1,6 +1,7 @@
 defmodule Player do
   use GenServer
 
+  alias Discord.Gateway.State
   alias Discord.Voice.State, as: VoiceState
   alias Discord.Voice.Encoder
 
@@ -52,7 +53,16 @@ defmodule Player do
     {:noreply, state}
   end
 
-  def download_from_youtube(request) do
+  defp play_youtube(request) do
+    request
+    |> download_from_youtube()
+    |> set_status()
+    |> extract_json_filename()
+    |> encode_packets()
+    |> play_packets()
+  end
+
+  defp download_from_youtube(request) do
     query = URI.encode_www_form(request)
     {json_output, 0} = System.cmd(
       "youtube-dl", [
@@ -67,14 +77,16 @@ defmodule Player do
         "https://www.youtube.com/results?search_query=#{query}&page=1"
       ]
     )
-    Poison.decode!(json_output)["_filename"]
+    Poison.decode!(json_output)
   end
 
-  defp play_youtube(request) do
-    request
-    |> download_from_youtube()
-    |> encode_packets()
-    |> play_packets()
+  defp set_status(json) do
+    State.set_status(json["fulltitle"])
+    json
+  end
+
+  defp extract_json_filename(json) do
+    json["_filename"]
   end
 
   defp encode_packets(file) do

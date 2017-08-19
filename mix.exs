@@ -1,4 +1,4 @@
-defmodule MusicBot.Mixfile do
+defmodule MusicEx.Mixfile do
   use Mix.Project
 
   def project do
@@ -37,7 +37,8 @@ defmodule MusicBot.Mixfile do
       {:websockex, "~> 0.3.1"},
       {:socket, "~> 0.3.12"},
       {:dogma, "~> 0.1", only: :dev},
-      {:kcl, "~> 1.0"}
+      {:kcl, "~> 1.0"},
+      {:uuid, "~> 1.1"}
     ]
   end
 end

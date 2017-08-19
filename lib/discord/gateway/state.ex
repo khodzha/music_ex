@@ -2,6 +2,7 @@ defmodule Discord.Gateway.State do
   use GenServer
   alias Discord.Gateway
   alias Discord.Voice.State, as: VoiceState
+  alias MusicEx.Player
 
   @guild_id         Application.get_env(:music_ex, :guild_id)
   @voice_channel_id Application.get_env(:music_ex, :voice_channel_id)

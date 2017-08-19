@@ -1,4 +1,4 @@
-defmodule Player do
+defmodule MusicEx.Player do
   use GenServer
 
   alias Discord.Gateway.State
@@ -90,7 +90,8 @@ defmodule Player do
   end
 
   defp encode_packets(file) do
-    Encoder.encode(file)
+    file
+    |> Encoder.encode()
     |> Stream.with_index()
     |> Enum.map(fn {frame, seq} ->
       VoiceState.encode(frame, seq)
@@ -108,12 +109,12 @@ defmodule Player do
     cond do
       Map.get(state, :stopped) ->
         state = Map.delete(state, :stopped)
-        send_silence(seq+1)
+        send_silence(seq + 1)
         {:noreply, state}
 
       Map.get(state, :paused) ->
         state = Map.put(state, :packets, rest)
-        send_silence(seq+1)
+        send_silence(seq + 1)
         {:noreply, state}
 
       true ->
@@ -126,11 +127,16 @@ defmodule Player do
 
         VoiceState.send_packet(packet)
 
-        sleep_time = case elapsed - :os.system_time(:milli_seconds) + @default_ms do
+        now = :os.system_time(:milli_seconds)
+        sleep_time = case elapsed - now + @default_ms do
           x when x < 0 -> 0
           x -> x
         end
-        Process.send_after(self(), {:play_loop, rest, seq+1, elapsed + @default_ms}, sleep_time)
+        Process.send_after(
+          self(),
+          {:play_loop, rest, seq + 1, elapsed + @default_ms},
+          sleep_time
+        )
 
         state = Map.put(state, :packets, rest)
 
@@ -140,7 +146,7 @@ defmodule Player do
 
   def handle_info({:play_loop, [], seq, _elapsed}, state) do
     Discord.API.Message.create("Finished playing")
-    send_silence(seq+1)
+    send_silence(seq + 1)
     {:noreply, state}
   end
 
@@ -149,12 +155,16 @@ defmodule Player do
     {:noreply, state}
   end
   def handle_info({:silence, seq, frames_left}, state) do
-    Process.send_after(self(), {:silence, seq+1, frames_left-1}, @default_ms)
+    Process.send_after(
+      self(),
+      {:silence, seq + 1, frames_left - 1},
+      @default_ms
+    )
     {:noreply, state}
   end
 
   defp send_silence(seq) do
     VoiceState.encode(@silence, seq)
-    Process.send_after(self(), {:silence, seq+1, 5}, @default_ms)
+    Process.send_after(self(), {:silence, seq + 1, 5}, @default_ms)
   end
 end

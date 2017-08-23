@@ -42,12 +42,14 @@ defmodule MusicEx.Player do
 
   def handle_cast(:inspect_playlist, state) do
     s = Playlist.to_s(state.playlist)
-    Discord.API.Message.create("""
+    Task.start(fn ->
+      Discord.API.Message.create("""
       Current playlist
       ==============================================================
       #{s}
       """
-    )
+      )
+    end)
     {:noreply, state}
   end
 

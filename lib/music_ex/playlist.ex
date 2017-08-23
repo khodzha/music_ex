@@ -16,6 +16,10 @@ defmodule MusicEx.Playlist do
     push(playlist, Song.build(song))
   end
 
+  def current_song(%Playlist{} = p) do
+    Enum.find(p.songs, &(&1.uuid == p.now_playing))
+  end
+
   def play_next(playlist) do
     song = case playlist.last_playing do
       nil -> Enum.at(playlist.songs, 0)
@@ -31,7 +35,11 @@ defmodule MusicEx.Playlist do
       %Song{uuid: uuid} -> uuid
     end
 
-    {song, %{playlist | now_playing: song_uuid, last_playing: song_uuid}}
+    %{playlist | now_playing: song_uuid, last_playing: song_uuid}
+  end
+
+  def skip_all(pl) do
+    %{ pl | now_playing: nil, last_playing: nil }
   end
 
   def to_s(p) do
@@ -41,5 +49,16 @@ defmodule MusicEx.Playlist do
     |> Enum.join("\n")
 
     "Now playing: #{p.now_playing}\nLast playing: #{p.last_playing}\n\n#{s}"
+  end
+
+  def set_song_metadata(%Playlist{} = p, %Song{uuid: id}, mdata) do
+    songs = Enum.map(p.songs, fn song ->
+      case song do
+        %Song{uuid: ^id} = s -> Song.set_metadata(s, mdata)
+        %Song{} = s -> s
+      end
+    end)
+
+    %{ p | songs: songs }
   end
 end

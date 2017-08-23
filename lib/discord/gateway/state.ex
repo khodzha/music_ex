@@ -161,6 +161,18 @@ defmodule Discord.Gateway.State do
     {:noreply, state}
   end
 
+  def handle_cast({:new_message, %{"content" => "!skip"}}, state) do
+    Player.skip()
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:new_message, %{"content" => "!clear"}}, state) do
+    Player.skip()
+
+    {:noreply, state}
+  end
+
   def handle_cast({:new_message, _message}, state) do
     {:noreply, state}
   end

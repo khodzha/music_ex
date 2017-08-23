@@ -30,6 +30,14 @@ defmodule MusicEx.Player do
     GenServer.cast(__MODULE__, :unpause)
   end
 
+  def skip do
+    GenServer.cast(__MODULE__, :skip)
+  end
+
+  def clear do
+    GenServer.cast(__MODULE__, :clear)
+  end
+
   def init(:ok) do
     {:ok, %{playlist: Playlist.new(), sending_silence: false}}
   end
@@ -58,19 +66,32 @@ defmodule MusicEx.Player do
     {:noreply, state}
   end
 
+  def handle_cast(:skip, state) do
+    state = Map.put(state, :skip, true)
+    {:noreply, state}
+  end
+
+  def handle_cast(:clear, state) do
+    state = Map.put(state, :clear, true)
+    {:noreply, state}
+  end
+
   def handle_cast(:unpause, state) do
     state = Map.put(state, :paused, false)
+    song = Playlist.current_song(state.playlist)
+    State.set_status(song.metadata["fulltitle"])
     play_packets(state.packets)
     {:noreply, state}
   end
 
-  defp play_youtube(request) do
-    request
-    |> download_from_youtube()
-    |> set_status()
+  defp play_youtube(%Song{} = song) do
+    json = download_from_youtube(song.title)
+    json
     |> extract_json_filename()
     |> encode_packets()
     |> play_packets()
+
+    json
   end
 
   defp download_from_youtube(request) do
@@ -89,11 +110,6 @@ defmodule MusicEx.Player do
       ]
     )
     Poison.decode!(json_output)
-  end
-
-  defp set_status(json) do
-    State.set_status(json["fulltitle"])
-    json
   end
 
   defp extract_json_filename(json) do
@@ -120,8 +136,22 @@ defmodule MusicEx.Player do
     cond do
       Map.get(state, :paused) ->
         state = Map.put(state, :packets, rest)
+        song = Playlist.current_song(state.playlist)
+        State.set_status(~s[Paused: #{song.metadata["fulltitle"]}])
         send_silence(seq + 1)
         {:noreply, %{ state | sending_silence: true }}
+
+      Map.get(state, :skip) ->
+        Process.send_after(
+          self(),
+          {:play_loop, [], seq + 1, elapsed + @default_ms},
+          @default_ms
+        )
+        {:noreply, %{ state | skip: false }}
+
+      Map.get(state, :clear) ->
+        send_silence(seq + 1)
+        {:noreply, %{ state | clear: false, playlist: Playlist.new() }}
 
       true ->
         if rem(seq, 1500) == 0 do
@@ -173,9 +203,12 @@ defmodule MusicEx.Player do
     {:noreply, state}
   end
 
-  def handle_info({:play, %Song{title: title}}, state) do
-    play_youtube(title)
-    {:noreply, state}
+  def handle_info(:play, state) do
+    song = Playlist.current_song(state.playlist)
+    metadata = play_youtube(song)
+    p = Playlist.set_song_metadata(state.playlist, song, metadata)
+    State.set_status(song.metadata["fulltitle"])
+    {:noreply, %{ state | playlist: p}}
   end
 
   def handle_info(:added_to_playlist, state) do
@@ -199,9 +232,10 @@ defmodule MusicEx.Player do
   end
 
   defp maybe_play(%Playlist{now_playing: nil} = pl) do
-    {song, playlist} = Playlist.play_next(pl)
-    unless is_nil(song), do: send(self(), {:play, song})
-    playlist
+    p = Playlist.play_next(pl)
+    song = Playlist.current_song(p)
+    unless is_nil(song), do: send(self(), :play)
+    p
   end
 
   defp maybe_play(%Playlist{} = pl), do: pl

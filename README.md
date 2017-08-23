@@ -22,6 +22,14 @@ Unpause the current song.
 
 Outputs playlist to channel.
 
+> !skip
+
+Skips current song and goes to next one if present.
+
+> !clear
+
+Skips current song and removes playlist.
+
 ## Dependencies
 
 For this bot to work right, you must have [dca-rs] & [youtube-dl] in the path.

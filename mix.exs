@@ -38,7 +38,8 @@ defmodule MusicEx.Mixfile do
       {:socket, "~> 0.3.12"},
       {:dogma, "~> 0.1", only: :dev},
       {:kcl, "~> 1.0"},
-      {:uuid, "~> 1.1"}
+      {:uuid, "~> 1.1"},
+      {:distillery, "~> 1.5.1", runtime: false}
     ]
   end
 end

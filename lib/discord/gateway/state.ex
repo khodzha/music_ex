@@ -4,12 +4,13 @@ defmodule Discord.Gateway.State do
   alias Discord.Voice.State, as: VoiceState
   alias MusicEx.Player
 
-  @guild_id         Application.get_env(:music_ex, :guild_id)
-  @voice_channel_id Application.get_env(:music_ex, :voice_channel_id)
-  @self_user_id     Application.get_env(:music_ex, :self_user_id)
-
   def start_link do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+    initial_state = %{
+      guild_id: Application.get_env(:music_ex, :guild_id),
+      voice_channel_id: Application.get_env(:music_ex, :voice_channel_id),
+      self_user_id: Application.get_env(:music_ex, :self_user_id)
+    }
+    GenServer.start_link(__MODULE__, initial_state, name: __MODULE__)
   end
 
   def set_status(status) do
@@ -36,7 +37,7 @@ defmodule Discord.Gateway.State do
     GenServer.call(__MODULE__, {:ready, payload})
   end
 
-  def do_process_message(%{"t" => "VOICE_STATE_UPDATE", "d" => %{"user_id" => @self_user_id} = payload}) do
+  def do_process_message(%{"t" => "VOICE_STATE_UPDATE", "d" => payload}) do
     GenServer.call(__MODULE__, {:voice_state_update, payload})
   end
 
@@ -59,10 +60,13 @@ defmodule Discord.Gateway.State do
     IO.puts "MSG WITHOUT HANDLER: #{inspect msg}"
   end
 
-  def init(:ok) do
+  def init(initial_state) do
     {:ok, pid} = Gateway.start_link
     {:ok, voice_pid} = VoiceState.start_link
-    {:ok, %{gateway: pid, voice: voice_pid}}
+    state = initial_state
+    |> Map.put(:gateway, pid)
+    |> Map.put(:voice, voice_pid)
+    {:ok, state}
   end
 
   def handle_call({:heartbeat_interval, hb_interval}, _from, state) do
@@ -94,8 +98,8 @@ defmodule Discord.Gateway.State do
     Discord.Gateway.send_frame(state.gateway, %{
       "op" => 4,
       "d" => %{
-        "guild_id": @guild_id,
-        "channel_id": @voice_channel_id,
+        "guild_id": state.guild_id,
+        "channel_id": state.voice_channel_id,
         "self_mute": false,
         "self_deaf": true
       }
@@ -104,6 +108,8 @@ defmodule Discord.Gateway.State do
   end
 
   def handle_call({:voice_state_update, payload}, _from, state) do
+    self_user_id = state.self_user_id
+    %{"user_id" => ^self_user_id} = payload
     VoiceState.set_var(:session_id, payload["session_id"])
     VoiceState.set_var(:user_id, payload["user_id"])
 

@@ -2,6 +2,7 @@
   "chacha20": {:hex, :chacha20, "1.0.0", "41d376162fe35428759c0c55af9918f51e8efc8a810b99adda0d3b0e719c5ca4", [:mix], [], "hexpm"},
   "curve25519": {:hex, :curve25519, "1.0.0", "0ee6e185b40b0f6317cf59627ac2e63a75c2904c206d14de505d88a1703ef1fb", [:mix], [], "hexpm"},
   "discord_ex": {:git, "https://github.com/rmcafee/discord_ex", "601477368ec8a1304461568aa4ca0d5c411494a2", []},
+  "distillery": {:hex, :distillery, "1.5.1", "7ad7354214959c0f65f57ddd49478c81c3b2733ca2e5ccfb9eb55351108466aa", [], [], "hexpm"},
   "dns": {:hex, :dns, "0.0.4", "2e347a0a03e8345bc70c6d69ed08788103a3bec81b93e4636b1b432110835436", [:mix], [{:socket, "~> 0.3.5", [hex: :socket, repo: "hexpm", optional: false]}], "hexpm"},
   "dogma": {:hex, :dogma, "0.1.15", "5bceba9054b2b97a4adcb2ab4948ca9245e5258b883946e82d32f785340fd411", [], [{:poison, ">= 2.0.0", [hex: :poison, repo: "hexpm", optional: false]}], "hexpm"},
   "ed25519": {:hex, :ed25519, "1.0.1", "bcc426b70cf0da9922e839ba4a36343ee4108de4a380f847257a8a29641d0244", [:mix], [], "hexpm"},

@@ -22,6 +22,6 @@ defmodule Discord.API.Url do
   end
 
   def bot_token do
-    "Bot #{Application.get_env(:music_ex, :token)}"
+    "Bot #{Application.fetch_env!(:music_ex, :token)}"
   end
 end

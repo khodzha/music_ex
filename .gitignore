@@ -24,3 +24,5 @@ erl_crash.dump
 *.secret.exs
 *.webm
 *.m4a
+dca-rs
+youtube-dl

@@ -109,9 +109,10 @@ defmodule Discord.Gateway.State do
 
   def handle_call({:voice_state_update, payload}, _from, state) do
     self_user_id = state.self_user_id
-    %{"user_id" => ^self_user_id} = payload
-    VoiceState.set_var(:session_id, payload["session_id"])
-    VoiceState.set_var(:user_id, payload["user_id"])
+    if payload["user_id"] == self_user_id do
+      VoiceState.set_var(:session_id, payload["session_id"])
+      VoiceState.set_var(:user_id, payload["user_id"])
+    end
 
     {:reply, :ok, state}
   end

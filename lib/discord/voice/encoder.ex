@@ -1,7 +1,7 @@
 defmodule Discord.Voice.Encoder do
   def encode(file) do
-    {data, 0} = System.cmd("dca-rs", ["-i", file, "-b", "64"])
-    <<"DCA1", json_len::little-signed-32, _json::binary-size(json_len), opus_data::binary>> = data
+    c = "dca-rs -i #{file} --raw -b 64"
+    %Porcelain.Result{out: opus_data, status: 0} = Porcelain.shell(c)
 
     split_packets([], opus_data)
   end

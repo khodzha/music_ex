@@ -16,7 +16,7 @@ defmodule MusicEx.Mixfile do
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :porcelain],
       mod: {MusicEx, []}
     ]
   end
@@ -39,7 +39,9 @@ defmodule MusicEx.Mixfile do
       {:dogma, "~> 0.1", only: :dev},
       {:kcl, "~> 1.0"},
       {:uuid, "~> 1.1"},
-      {:distillery, "~> 1.5.1", runtime: false}
+      {:distillery, "~> 1.5.1", runtime: false},
+      {:porcelain, "~> 2.0"},
+      {:temp, "~> 0.4"}
     ]
   end
 end

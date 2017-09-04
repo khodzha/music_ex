@@ -6,6 +6,7 @@ defmodule MusicEx.Player do
   alias Discord.Voice.Encoder
   alias MusicEx.Playlist
   alias MusicEx.Song
+  alias MusicEx.YoutubeDL
 
   @silence <<0xF8, 0xFF, 0xFE>>
   @default_ms 20
@@ -85,39 +86,15 @@ defmodule MusicEx.Player do
   end
 
   defp play_youtube(%Song{} = song) do
-    json = download_from_youtube(song.title)
-    json
-    |> extract_json_filename()
+    YoutubeDL.binary_to_file(song.title)
     |> encode_packets()
     |> play_packets()
 
-    json
+    YoutubeDL.metadata(song.title)
   end
 
-  defp download_from_youtube(request) do
-    query = URI.encode_www_form(request)
-    {json_output, 0} = System.cmd(
-      "youtube-dl", [
-        "--print-json",
-        "--id",
-        "-q",
-        "-w",
-        "-f",
-        "bestaudio",
-        "--playlist-items",
-        "1",
-        "https://www.youtube.com/results?search_query=#{query}&page=1"
-      ]
-    )
-    Poison.decode!(json_output)
-  end
-
-  defp extract_json_filename(json) do
-    json["_filename"]
-  end
-
-  defp encode_packets(file) do
-    file
+  defp encode_packets(file_path) do
+    file_path
     |> Encoder.encode()
     |> Stream.with_index()
     |> Enum.map(fn {frame, seq} ->

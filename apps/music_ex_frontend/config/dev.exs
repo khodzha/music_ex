@@ -49,8 +49,8 @@ config :phoenix, :stacktrace_depth, 20
 # Configure your database
 config :music_ex_frontend, MusicExFrontend.Repo,
   adapter: Ecto.Adapters.Postgres,
-  username: "postgres",
-  password: "postgres",
+  username: "khodzha",
+  password: "khodzha",
   database: "music_ex_frontend_dev",
   hostname: "localhost",
   pool_size: 10

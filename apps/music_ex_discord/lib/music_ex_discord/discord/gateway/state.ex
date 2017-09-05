@@ -175,7 +175,7 @@ defmodule MusicExDiscord.Discord.Gateway.State do
   end
 
   def handle_cast({:new_message, %{"content" => "!clear"}}, state) do
-    Player.skip()
+    Player.clear()
 
     {:noreply, state}
   end

@@ -26,8 +26,8 @@ ENV LANGUAGE C.UTF-8
 ENV LC_ALL C.UTF-8
 WORKDIR /app
 COPY --from=builder /app/_build/prod/rel/music_ex .
-# ADD dca-rs ./bin/dca-rs
-# ADD youtube-dl ./bin/youtube-dl
-# ENV PATH "./bin/:${PATH}"
+ADD dca-rs ./bin/dca-rs
+ADD youtube-dl ./bin/youtube-dl
+ENV PATH "./bin/:${PATH}"
 
 CMD ["./bin/music_ex", "foreground"]

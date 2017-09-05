@@ -2,45 +2,19 @@ defmodule MusicEx.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :music_ex,
-     version: "0.1.0",
-     elixir: "~> 1.4",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     deps: deps()]
-  end
-
-  # Configuration for the OTP application
-  #
-  # Type "mix help compile.app" for more information
-  def application do
-    # Specify extra applications you'll use from Erlang/Elixir
     [
-      extra_applications: [:logger, :porcelain],
-      mod: {MusicEx, []}
+      apps_path: "apps",
+      start_permanent: Mix.env == :prod,
+      deps: deps()
     ]
   end
 
-  # Dependencies can be Hex packages:
+  # Dependencies listed here are available only for this
+  # project and cannot be accessed from applications inside
+  # the apps folder.
   #
-  #   {:my_dep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:my_dep, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
-  #
-  # Type "mix help deps" for more examples and options
+  # Run "mix help deps" for examples and options.
   defp deps do
-    [
-      {:httpoison, "~> 0.12"},
-      {:poison, "~> 3.1"},
-      {:websockex, "~> 0.3.1"},
-      {:socket, "~> 0.3.12"},
-      {:dogma, "~> 0.1", only: :dev},
-      {:kcl, "~> 1.0"},
-      {:uuid, "~> 1.1"},
-      {:porcelain, "~> 2.0"},
-      {:temp, "~> 0.4"}
-    ]
+    []
   end
 end

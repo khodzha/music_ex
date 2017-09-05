@@ -39,7 +39,6 @@ defmodule MusicEx.Mixfile do
       {:dogma, "~> 0.1", only: :dev},
       {:kcl, "~> 1.0"},
       {:uuid, "~> 1.1"},
-      {:distillery, "~> 1.5.1", runtime: false},
       {:porcelain, "~> 2.0"},
       {:temp, "~> 0.4"}
     ]

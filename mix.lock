@@ -1,9 +1,6 @@
 %{"certifi": {:hex, :certifi, "1.2.1", "c3904f192bd5284e5b13f20db3ceac9626e14eeacfbb492e19583cf0e37b22be", [:rebar3], [], "hexpm"},
   "chacha20": {:hex, :chacha20, "1.0.0", "41d376162fe35428759c0c55af9918f51e8efc8a810b99adda0d3b0e719c5ca4", [:mix], [], "hexpm"},
   "curve25519": {:hex, :curve25519, "1.0.0", "0ee6e185b40b0f6317cf59627ac2e63a75c2904c206d14de505d88a1703ef1fb", [:mix], [], "hexpm"},
-  "discord_ex": {:git, "https://github.com/rmcafee/discord_ex", "601477368ec8a1304461568aa4ca0d5c411494a2", []},
-  "distillery": {:hex, :distillery, "1.5.1", "7ad7354214959c0f65f57ddd49478c81c3b2733ca2e5ccfb9eb55351108466aa", [], [], "hexpm"},
-  "dns": {:hex, :dns, "0.0.4", "2e347a0a03e8345bc70c6d69ed08788103a3bec81b93e4636b1b432110835436", [:mix], [{:socket, "~> 0.3.5", [hex: :socket, repo: "hexpm", optional: false]}], "hexpm"},
   "dogma": {:hex, :dogma, "0.1.15", "5bceba9054b2b97a4adcb2ab4948ca9245e5258b883946e82d32f785340fd411", [], [{:poison, ">= 2.0.0", [hex: :poison, repo: "hexpm", optional: false]}], "hexpm"},
   "ed25519": {:hex, :ed25519, "1.0.1", "bcc426b70cf0da9922e839ba4a36343ee4108de4a380f847257a8a29641d0244", [:mix], [], "hexpm"},
   "equivalex": {:hex, :equivalex, "1.0.0", "1022006de832b084451af61a446e9bfcd4c3e949adf7ae64b70189e84100e710", [:mix], [], "hexpm"},
@@ -11,7 +8,6 @@
   "httpoison": {:hex, :httpoison, "0.12.0", "8fc3d791c5afe6beb0093680c667dd4ce712a49d89c38c3fe1a43100dd76cf90", [:mix], [{:hackney, "~> 1.8.0", [hex: :hackney, repo: "hexpm", optional: false]}], "hexpm"},
   "idna": {:hex, :idna, "5.0.2", "ac203208ada855d95dc591a764b6e87259cb0e2a364218f215ad662daa8cd6b4", [:rebar3], [{:unicode_util_compat, "0.2.0", [hex: :unicode_util_compat, repo: "hexpm", optional: false]}], "hexpm"},
   "kcl": {:hex, :kcl, "1.0.0", "704c0643fe7d9ca4094a920ebdfbd4552674412e7f2b5734eac9c1d4e0f3e4f4", [:mix], [{:curve25519, "~> 1.0", [hex: :curve25519, repo: "hexpm", optional: false]}, {:ed25519, "~> 1.0", [hex: :ed25519, repo: "hexpm", optional: false]}, {:poly1305, "~> 1.0", [hex: :poly1305, repo: "hexpm", optional: false]}, {:salsa20, "~> 1.0", [hex: :salsa20, repo: "hexpm", optional: false]}], "hexpm"},
-  "libsodium": {:hex, :libsodium, "0.0.10", "24584e6f5a60aed53542054c15fb31719bbf2d811d9a84f626734faf64d41304", [:rebar3], [], "hexpm"},
   "metrics": {:hex, :metrics, "1.0.1", "25f094dea2cda98213cecc3aeff09e940299d950904393b2a29d191c346a8486", [:rebar3], [], "hexpm"},
   "mimerl": {:hex, :mimerl, "1.0.2", "993f9b0e084083405ed8252b99460c4f0563e41729ab42d9074fd5e52439be88", [:rebar3], [], "hexpm"},
   "poison": {:hex, :poison, "3.1.0", "d9eb636610e096f86f25d9a46f35a9facac35609a7591b3be3326e99a0484665", [:mix], [], "hexpm"},
@@ -23,5 +19,4 @@
   "temp": {:hex, :temp, "0.4.3", "b641c3ce46094839bff110fdb64162536d640d9d47ca2c37add9104a2fa3bd81", [:mix], [], "hexpm"},
   "unicode_util_compat": {:hex, :unicode_util_compat, "0.2.0", "dbbccf6781821b1c0701845eaf966c9b6d83d7c3bfc65ca2b78b88b8678bfa35", [:rebar3], [], "hexpm"},
   "uuid": {:hex, :uuid, "1.1.7", "007afd58273bc0bc7f849c3bdc763e2f8124e83b957e515368c498b641f7ab69", [], [], "hexpm"},
-  "websocket_client": {:hex, :websocket_client, "1.2.4", "14ec1ca4b6d247b44ccd9a80af8f6ca98328070f6c1d52a5cb00bc9d939d63b8", [:rebar3], [], "hexpm"},
   "websockex": {:hex, :websockex, "0.3.1", "8ea9a9e2f64be53a65c9dc26df22e72f36ed52863a900d34787fa28c51abcd42", [:mix], [], "hexpm"}}

@@ -19,6 +19,14 @@ defmodule MusicExFrontend.Router do
     get "/", PageController, :index
   end
 
+  scope "/auth", MusicExFrontend do
+    pipe_through :browser
+
+    get "/", AuthController, :index
+    get "/callback", AuthController, :callback
+    delete "/logout", AuthController, :delete
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", MusicExFrontend do
   #   pipe_through :api

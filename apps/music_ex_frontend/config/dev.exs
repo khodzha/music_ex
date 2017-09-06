@@ -54,3 +54,10 @@ config :music_ex_frontend, MusicExFrontend.Repo,
   database: "music_ex_frontend_dev",
   hostname: "localhost",
   pool_size: 10
+
+config :music_ex_frontend,
+  encryption_salt: "9jq36efEoqJotrC",
+  signing_salt: "WYR7ztQW6w5RrTZ5Cz3"
+
+
+import_config "dev.secret.exs"

@@ -1,4 +1,4 @@
-defmodule MusicExTest do
+defmodule MusicExDiscordTest do
   use ExUnit.Case
   doctest MusicEx
 

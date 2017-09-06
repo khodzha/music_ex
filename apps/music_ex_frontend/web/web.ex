@@ -37,6 +37,45 @@ defmodule MusicExFrontend.Web do
 
       import MusicExFrontend.Router.Helpers
       import MusicExFrontend.Gettext
+
+      alias Plug.Crypto.KeyGenerator
+      alias Plug.Crypto.MessageEncryptor
+
+      def read_private_cookie(%Plug.Conn{} = conn, cookie_name) do
+        enc_key = key(conn, :encryption_salt)
+        sgn_key = key(conn, :signing_salt)
+
+        case conn.cookies[cookie_name] do
+          nil -> nil
+          value ->
+            {:ok, serialized_value} = MessageEncryptor.decrypt(value, enc_key, sgn_key)
+            Plug.Crypto.safe_binary_to_term(serialized_value)
+        end
+      end
+
+      def put_private_cookie(%Plug.Conn{} = conn, key, value, params \\ []) do
+        enc_key = key(conn, :encryption_salt)
+        sgn_key = key(conn, :signing_salt)
+
+        serialized_value = :erlang.term_to_binary(value)
+        cookie = MessageEncryptor.encrypt(serialized_value, enc_key, sgn_key)
+
+        put_resp_cookie(conn, key, cookie, params)
+      end
+
+      defp key(conn, :encryption_salt) do
+        KeyGenerator.generate(
+          conn.secret_key_base,
+          Application.get_env(:music_ex_frontend, :encryption_salt)
+        )
+      end
+
+      defp key(conn, :signing_salt) do
+        KeyGenerator.generate(
+          conn.secret_key_base,
+          Application.get_env(:music_ex_frontend, :signing_salt)
+        )
+      end
     end
   end
 

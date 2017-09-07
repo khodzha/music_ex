@@ -1,0 +1,19 @@
+<div class="col-sm-12">
+  <h1>
+    <%= @guild["name"] %>
+    <img src="<%= guild_icon(@guild, 128) %>"/>
+  </h1>
+</div>
+
+<%= form_for @changeset, guilds_path(@conn, :update, @guild["id"]), fn f -> %>
+  <label>
+    Text channel:
+    <%= select f, :text_channel_id, Enum.map(text_channels(@channels), &{"#" <> &1["name"], &1["id"]}) %>
+  </label>
+
+  <label>
+    Voice channel: <%= select f, :voice_channel_id, Enum.map(voice_channels(@channels), &{"🔉" <> &1["name"], &1["id"]}) %>
+  </label>
+
+  <%= submit "Submit" %>
+<% end %>

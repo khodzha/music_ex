@@ -1,0 +1,14 @@
+<table class="table table-hover">
+ <%= for guild <- @guilds do %>
+    <tr>
+      <td>
+        <a href="<%= guilds_path(@conn, :show, guild["id"]) %>">
+          <%= guild["name"] %>
+        </a>
+      </td>
+      <td>
+        <img src="<%= guild_icon(guild) %>"/>
+      </td>
+    </tr>
+  <% end %>
+</table>

@@ -17,6 +17,7 @@ defmodule MusicExFrontend.Router do
     pipe_through :browser # Use the default browser stack
 
     get "/", PageController, :index
+    resources "/guilds", GuildsController, only: [:show, :update]
   end
 
   scope "/auth", MusicExFrontend do

@@ -1,57 +1,65 @@
 defmodule MusicExDiscord.Discord.Voice.State do
   use GenServer
 
-  alias MusicExDiscord.Discord.Gateway
   alias MusicExDiscord.Discord.Voice.Gateway, as: VoiceGateway
   alias MusicExDiscord.Discord.Voice.Encoder
+  alias MusicExDiscord.Discord.API.Message
+  alias MusicExDiscord.GuildLookup
 
-  def start_link do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+  def start_link(guild) do
+    via_name = {:via, Registry, {:guilds_registry, "voice_state_#{guild.guild_id}"}}
+    GenServer.start_link(__MODULE__, %{text_channel_id: guild.text_channel_id, guild_id: guild.guild_id}, name: via_name)
   end
 
-  def set_var(varname, value) when varname in [:token, :session_id, :endpoint, :user_id, :server_id] do
-    GenServer.call(__MODULE__, {:set_var, varname, value})
-    maybe_connect()
+  def child_spec([guild]) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [guild]},
+      type: :worker,
+      restart: :permanent,
+      shutdown: 500
+    }
   end
 
-  def process_message(%{"op" => 2, "d" => payload}) do
-    GenServer.call(__MODULE__, {:ready, payload})
+  def set_var(pid, varname, value) when varname in [:token, :session_id, :endpoint, :user_id, :server_id] do
+    GenServer.call(pid, {:set_var, varname, value})
+    GenServer.call(pid, :try_connect)
   end
 
-  def process_message(%{"op" => 4, "d" => payload}) do
-    GenServer.call(__MODULE__, {:session_description, payload})
+  def process_message(pid, %{"op" => 2, "d" => payload}) do
+    GenServer.call(pid, {:ready, payload})
+  end
+
+  def process_message(pid, %{"op" => 4, "d" => payload}) do
+    GenServer.call(pid, {:session_description, payload})
   end
 
   # received heartbeat ACK, do nothing
-  def process_message(%{"op" => 6}) do
+  def process_message(_pid, %{"op" => 6}) do
   end
 
-  def process_message(%{"op" => 8, "d" => %{"heartbeat_interval" => hb_interval}}) do
-    GenServer.call(__MODULE__, {:heartbeat_interval, hb_interval})
+  def process_message(pid, %{"op" => 8, "d" => %{"heartbeat_interval" => hb_interval}}) do
+    GenServer.call(pid, {:heartbeat_interval, hb_interval})
   end
 
   def process_message(msg) do
     IO.puts "VOICESTATE NO HANDLER: #{inspect msg}"
   end
 
-  def maybe_connect do
-    GenServer.call(__MODULE__, :try_connect)
+  def speaking(pid, value) do
+    GenServer.cast(pid, {:speaking, value})
   end
 
-  def speaking(value) do
-    GenServer.cast(__MODULE__, {:speaking, value})
+  def send_packet(pid, packet) do
+    GenServer.call(pid, {:send_packet, packet})
   end
 
-  def send_packet(packet) do
-    GenServer.call(__MODULE__, {:send_packet, packet})
+  def encode(pid, frame, seq) do
+    GenServer.call(pid, {:encode_packet, frame, seq})
   end
 
-  def encode(frame, seq) do
-    GenServer.call(__MODULE__, {:encode_packet, frame, seq})
-  end
-
-  def init(:ok) do
-    {:ok, %{}}
+  def init(initial_state) do
+    {:ok, initial_state}
   end
 
   def handle_call({:set_var, varname, value}, _from, state) when varname in [:token, :session_id, :endpoint, :user_id, :server_id] do
@@ -81,9 +89,9 @@ defmodule MusicExDiscord.Discord.Voice.State do
     end)
 
     if all_keys_present do
-      {:ok, pid} = VoiceGateway.start_link(state.endpoint)
-      state = Map.put(state, :voice_gateway, pid)
-      VoiceGateway.send_frame(state.voice_gateway, %{
+      MusicExDiscord.Gateway.Supervisor.start_voice_gateway(state.endpoint, state.guild_id)
+      voice_gateway_pid = GuildLookup.find_voice_gateway(state)
+      VoiceGateway.send_frame(voice_gateway_pid, %{
         "op" => 0,
         "d" => %{
           "server_id" => state.server_id,
@@ -111,8 +119,8 @@ defmodule MusicExDiscord.Discord.Voice.State do
     state = Map.put(state, :udp_listener, udp_listener)
 
     {our_ip, our_port} = ip_and_port_discovery(state)
-
-    VoiceGateway.send_frame(state.voice_gateway, %{
+    voice_gateway_pid = GuildLookup.find_voice_gateway(state)
+    VoiceGateway.send_frame(voice_gateway_pid, %{
       "op" => 1,
       "d" => %{
         "protocol" => "udp",
@@ -133,7 +141,7 @@ defmodule MusicExDiscord.Discord.Voice.State do
     |> :erlang.list_to_binary
 
     state = Map.put(state, :secret_key, secret_key)
-    MusicExDiscord.Discord.API.Message.create("Voice connected")
+    Message.create(state.text_channel_id, "Voice connected")
 
     {:reply, :ok, state}
   end
@@ -163,8 +171,8 @@ defmodule MusicExDiscord.Discord.Voice.State do
   # https://github.com/hammerandchisel/discord-api-docs/blob/f7693a5b3546ac95d092767afdd159da608dc518/docs/topics/Voice_Connections.md#heartbeating
   def handle_info(:send_heartbeat, state) do
     Process.send_after(self(), :send_heartbeat, state.heartbeat_interval)
-
-    Gateway.send_frame(state.voice_gateway, %{
+    voice_gateway_pid = GuildLookup.find_voice_gateway(state)
+    VoiceGateway.send_frame(voice_gateway_pid, %{
       "op" => 3,
       "d" => :os.system_time(:millisecond)
     })
@@ -173,7 +181,8 @@ defmodule MusicExDiscord.Discord.Voice.State do
   end
 
   def handle_cast({:speaking, value}, state) do
-    VoiceGateway.send_frame(state.voice_gateway, %{
+    voice_gateway_pid = GuildLookup.find_voice_gateway(state)
+    VoiceGateway.send_frame(voice_gateway_pid, %{
       "op" => 5,
       "d" => %{
         "speaking" => value,

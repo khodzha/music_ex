@@ -1,51 +1,67 @@
 defmodule MusicExDiscord.Discord.Gateway.State do
   use GenServer
+
   alias MusicExDiscord.Discord.Gateway
   alias MusicExDiscord.Discord.Voice.State, as: VoiceState
   alias MusicExDiscord.Player
+  alias MusicExDiscord.GuildLookup
 
-  def start_link do
+  def start_link(guild) do
     initial_state = %{
-      guild_id: Application.get_env(:music_ex_discord, :guild_id),
-      voice_channel_id: Application.get_env(:music_ex_discord, :voice_channel_id),
+      guild_id: guild.guild_id,
+      voice_channel_id: guild.voice_channel_id,
+      text_channel_id: guild.text_channel_id,
       self_user_id: Application.get_env(:music_ex_discord, :self_user_id)
     }
-    GenServer.start_link(__MODULE__, initial_state, name: __MODULE__)
+
+    via_name = {:via, Registry, {:guilds_registry, "state_#{guild.guild_id}"}}
+    GenServer.start_link(__MODULE__, initial_state, name: via_name)
   end
 
-  def set_status(status) do
-    GenServer.cast(__MODULE__, {:set_status, status})
-  end
-  def remove_status do
-    GenServer.cast(__MODULE__, :remove_status)
-  end
-
-  def process_message(%{"s" => hb_seq} = msg) do
-    GenServer.call(__MODULE__, {:hb_seq, hb_seq})
-    do_process_message(msg)
+  def child_spec([guild]) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [guild]},
+      type: :worker,
+      restart: :permanent,
+      shutdown: 500
+    }
   end
 
-  def do_process_message(%{"op" => 10, "d" => %{"heartbeat_interval" => hb_interval}}) do
-    GenServer.call(__MODULE__, {:heartbeat_interval, hb_interval})
+  def set_status(pid, status) do
+    GenServer.cast(pid, {:set_status, status})
   end
 
-  def do_process_message(%{"op" => 11}) do
-    GenServer.call(__MODULE__, :heartbeat)
+  def remove_status(pid) do
+    GenServer.cast(pid, :remove_status)
   end
 
-  def do_process_message(%{"t" => "READY", "d" => payload}) do
-    GenServer.call(__MODULE__, {:ready, payload})
+  def process_message(pid, %{"s" => hb_seq} = msg) do
+    GenServer.call(pid, {:hb_seq, hb_seq})
+    do_process_message(pid, msg)
   end
 
-  def do_process_message(%{"t" => "VOICE_STATE_UPDATE", "d" => payload}) do
-    GenServer.call(__MODULE__, {:voice_state_update, payload})
+  def do_process_message(pid, %{"op" => 10, "d" => %{"heartbeat_interval" => hb_interval}}) do
+    GenServer.call(pid, {:heartbeat_interval, hb_interval})
   end
 
-  def do_process_message(%{"t" => "VOICE_SERVER_UPDATE", "d" => payload}) do
-    GenServer.call(__MODULE__, {:voice_server_update, payload})
+  def do_process_message(pid, %{"op" => 11}) do
+    GenServer.call(pid, :heartbeat)
   end
 
-  def do_process_message(%{"t" => "MESSAGE_CREATE", "d" => payload}) do
+  def do_process_message(pid, %{"t" => "READY", "d" => payload}) do
+    GenServer.call(pid, {:ready, payload})
+  end
+
+  def do_process_message(pid, %{"t" => "VOICE_STATE_UPDATE", "d" => payload}) do
+    GenServer.call(pid, {:voice_state_update, payload})
+  end
+
+  def do_process_message(pid, %{"t" => "VOICE_SERVER_UPDATE", "d" => payload}) do
+    GenServer.call(pid, {:voice_server_update, payload})
+  end
+
+  def do_process_message(pid, %{"t" => "MESSAGE_CREATE", "d" => payload}) do
     author = payload["author"]
     |> Map.take(["id", "username"])
 
@@ -53,20 +69,15 @@ defmodule MusicExDiscord.Discord.Gateway.State do
     |> Map.take(["channel_id", "id", "content"])
     |> Map.put("author", author)
 
-    GenServer.cast(__MODULE__, {:new_message, message})
+    GenServer.cast(pid, {:new_message, message})
   end
 
-  def do_process_message(msg) do
+  def do_process_message(_pid, msg) do
     IO.puts "MSG WITHOUT HANDLER: #{inspect msg}"
   end
 
   def init(initial_state) do
-    {:ok, pid} = Gateway.start_link
-    {:ok, voice_pid} = VoiceState.start_link
-    state = initial_state
-    |> Map.put(:gateway, pid)
-    |> Map.put(:voice, voice_pid)
-    {:ok, state}
+    {:ok, initial_state}
   end
 
   def handle_call({:heartbeat_interval, hb_interval}, _from, state) do
@@ -74,7 +85,8 @@ defmodule MusicExDiscord.Discord.Gateway.State do
 
     Process.send_after(self(), {:"$gen_cast", :send_heartbeat}, hb_interval)
 
-    Gateway.send_frame(state.gateway, %{
+    gateway_pid = GuildLookup.find_gateway(state)
+    Gateway.send_frame(gateway_pid, %{
       "op" => 2,
       "d" => %{
         "token" => MusicExDiscord.Discord.API.Url.bot_token(),
@@ -95,7 +107,8 @@ defmodule MusicExDiscord.Discord.Gateway.State do
   def handle_call({:ready, payload}, _from, state) do
     state = Map.put(state, :session_id, payload["session_id"])
 
-    Gateway.send_frame(state.gateway, %{
+    gateway_pid = GuildLookup.find_gateway(state)
+    Gateway.send_frame(gateway_pid, %{
       "op" => 4,
       "d" => %{
         "guild_id": state.guild_id,
@@ -110,8 +123,9 @@ defmodule MusicExDiscord.Discord.Gateway.State do
   def handle_call({:voice_state_update, payload}, _from, state) do
     self_user_id = state.self_user_id
     if payload["user_id"] == self_user_id do
-      VoiceState.set_var(:session_id, payload["session_id"])
-      VoiceState.set_var(:user_id, payload["user_id"])
+      voice_pid = GuildLookup.find_voice_state(state)
+      VoiceState.set_var(voice_pid, :session_id, payload["session_id"])
+      VoiceState.set_var(voice_pid, :user_id, payload["user_id"])
     end
 
     {:reply, :ok, state}
@@ -123,9 +137,10 @@ defmodule MusicExDiscord.Discord.Gateway.State do
     |> String.split(":")
     |> List.first
 
-    VoiceState.set_var(:endpoint, endpoint)
-    VoiceState.set_var(:token, payload["token"])
-    VoiceState.set_var(:server_id, payload["guild_id"])
+    voice_pid = GuildLookup.find_voice_state(state)
+    VoiceState.set_var(voice_pid, :endpoint, endpoint)
+    VoiceState.set_var(voice_pid, :token, payload["token"])
+    VoiceState.set_var(voice_pid, :server_id, payload["guild_id"])
 
 
     {:reply, :ok, state}
@@ -146,36 +161,42 @@ defmodule MusicExDiscord.Discord.Gateway.State do
   end
 
   def handle_cast({:new_message, %{"content" => "!playlist"}}, state) do
-    Player.inspect_playlist()
+    player_pid = GuildLookup.find_player(state)
+    Player.inspect_playlist(player_pid)
     {:noreply, state}
   end
 
   def handle_cast({:new_message, %{"content" => "!play " <> request}}, state) do
-    Player.add_to_playlist(request)
+    player_pid = GuildLookup.find_player(state)
+    Player.add_to_playlist(player_pid, request)
 
     {:noreply, state}
   end
 
   def handle_cast({:new_message, %{"content" => "!pause"}}, state) do
-    Player.pause()
+    player_pid = GuildLookup.find_player(state)
+    Player.pause(player_pid)
 
     {:noreply, state}
   end
 
   def handle_cast({:new_message, %{"content" => "!unpause"}}, state) do
-    Player.unpause()
+    player_pid = GuildLookup.find_player(state)
+    Player.unpause(player_pid)
 
     {:noreply, state}
   end
 
   def handle_cast({:new_message, %{"content" => "!skip"}}, state) do
-    Player.skip()
+    player_pid = GuildLookup.find_player(state)
+    Player.skip(player_pid)
 
     {:noreply, state}
   end
 
   def handle_cast({:new_message, %{"content" => "!clear"}}, state) do
-    Player.clear()
+    player_pid = GuildLookup.find_player(state)
+    Player.clear(player_pid)
 
     {:noreply, state}
   end
@@ -188,7 +209,8 @@ defmodule MusicExDiscord.Discord.Gateway.State do
     Process.send_after(self(), {:"$gen_cast", :send_heartbeat}, state.heartbeat_interval)
 
     hb_seq = Map.get(state, :hb_seq)
-    Gateway.send_frame(state.gateway, %{
+    gateway_pid = GuildLookup.find_gateway(state)
+    Gateway.send_frame(gateway_pid, %{
       "op" => 1,
       "d" => hb_seq
     })
@@ -197,7 +219,8 @@ defmodule MusicExDiscord.Discord.Gateway.State do
   end
 
   def handle_cast({:set_status, status}, state) do
-    Gateway.send_frame(state.gateway, %{
+    gateway_pid = GuildLookup.find_gateway(state)
+    Gateway.send_frame(gateway_pid, %{
       "op" => 3,
       "d" => %{
         "since": nil,
@@ -213,7 +236,8 @@ defmodule MusicExDiscord.Discord.Gateway.State do
   end
 
   def handle_cast(:remove_status, state) do
-    Gateway.send_frame(state.gateway, %{
+    gateway_pid = GuildLookup.find_gateway(state)
+    Gateway.send_frame(gateway_pid, %{
       "op" => 3,
       "d" => %{
         "since": nil,

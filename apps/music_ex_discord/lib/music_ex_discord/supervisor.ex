@@ -1,17 +1,20 @@
 defmodule MusicExDiscord.Supervisor do
   use Supervisor
-  alias MusicExDiscord.Discord.Gateway.State
 
   def start_link do
-    Supervisor.start_link(MusicExDiscord.Supervisor, :ok, name: __MODULE__)
+    Supervisor.start_link(__MODULE__, :ok, name: __MODULE__)
+  end
+
+  def start_guild_supervisor(guild) do
+    spec = MusicExDiscord.GuildSupervisor.child_spec([guild])
+    Supervisor.start_child(__MODULE__, spec)
   end
 
   def init(:ok) do
     children = [
-      worker(State, []),
-      worker(MusicExDiscord.Player, [])
+      {Registry, [keys: :unique, name: :guilds_registry]},
     ]
 
-    supervise(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end

@@ -38,4 +38,4 @@
   "temp": {:hex, :temp, "0.4.3", "b641c3ce46094839bff110fdb64162536d640d9d47ca2c37add9104a2fa3bd81", [], [], "hexpm"},
   "unicode_util_compat": {:hex, :unicode_util_compat, "0.3.1", "a1f612a7b512638634a603c8f401892afbf99b8ce93a45041f8aaca99cadb85e", [], [], "hexpm"},
   "uuid": {:hex, :uuid, "1.1.7", "007afd58273bc0bc7f849c3bdc763e2f8124e83b957e515368c498b641f7ab69", [], [], "hexpm"},
-  "websockex": {:hex, :websockex, "0.3.1", "8ea9a9e2f64be53a65c9dc26df22e72f36ed52863a900d34787fa28c51abcd42", [], [], "hexpm"}}
+  "websockex": {:hex, :websockex, "0.3.1", "8ea9a9e2f64be53a65c9dc26df22e72f36ed52863a900d34787fa28c51abcd42", [:mix], [], "hexpm"}}

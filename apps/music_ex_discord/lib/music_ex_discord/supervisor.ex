@@ -7,7 +7,8 @@ defmodule MusicExDiscord.Supervisor do
 
   def start_guild_supervisor(guild) do
     spec = MusicExDiscord.GuildSupervisor.child_spec([guild])
-    Supervisor.start_child(__MODULE__, spec)
+    tuple = Supervisor.start_child(__MODULE__, spec)
+    :ok = element(1, tuple)
   end
 
   def init(:ok) do

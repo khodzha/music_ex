@@ -2,7 +2,7 @@ defmodule MusicExDiscord.Playlist do
   alias MusicExDiscord.Playlist
   alias MusicExDiscord.Song
 
-  defstruct songs: [], now_playing: nil, last_playing: nil
+  defstruct songs: [], now_playing: nil, last_played: nil
 
   def new do
     %Playlist{}
@@ -21,7 +21,7 @@ defmodule MusicExDiscord.Playlist do
   end
 
   def play_next(playlist) do
-    song = case playlist.last_playing do
+    song = case playlist.last_played do
       nil -> Enum.at(playlist.songs, 0)
       uuid ->
         case Enum.find_index(playlist.songs, &(&1.uuid == uuid)) do
@@ -30,16 +30,16 @@ defmodule MusicExDiscord.Playlist do
         end
     end
 
-    song_uuid = case song do
-      nil -> nil
-      %Song{uuid: uuid} -> uuid
+    case song do
+      nil -> %{playlist | now_playing: nil}
+      %Song{uuid: uuid} ->  %{playlist | now_playing: uuid, last_played: uuid}
     end
 
-    %{playlist | now_playing: song_uuid, last_playing: song_uuid}
+
   end
 
   def skip_all(pl) do
-    %{ pl | now_playing: nil, last_playing: nil }
+    %{ pl | now_playing: nil, last_played: nil }
   end
 
   def to_s(p) do
@@ -48,7 +48,7 @@ defmodule MusicExDiscord.Playlist do
     |> Enum.map(fn {s, idx} -> "  #{idx + 1}. #{s.uuid} #{s.title}" end)
     |> Enum.join("\n")
 
-    "Now playing: #{p.now_playing}\nLast playing: #{p.last_playing}\n\n#{s}"
+    "Now playing: #{p.now_playing}\nLast played: #{p.last_played}\n\n#{s}"
   end
 
   def set_song_metadata(%Playlist{} = p, %Song{uuid: id}, mdata) do

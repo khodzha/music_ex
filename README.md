@@ -40,3 +40,5 @@ and Linux.
 [youtube-dl]: https://rg3.github.io/youtube-dl/
 [dca-rs binaries]: https://github.com/nstafie/dca-rs/releases
 [youtube-dl binaries]: https://rg3.github.io/youtube-dl/download.html
+
+## Docker

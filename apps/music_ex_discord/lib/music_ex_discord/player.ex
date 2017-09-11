@@ -57,6 +57,10 @@ defmodule MusicExDiscord.Player do
     GenServer.cast(pid, :clear)
   end
 
+  def help(pid) do
+    GenServer.cast(pid, :help)
+  end
+
   def init(initial_state) do
     state = initial_state
     |> Map.put(:playlist, Playlist.new())
@@ -93,6 +97,16 @@ defmodule MusicExDiscord.Player do
 
   def handle_cast(:clear, state) do
     state = Map.put(state, :clear, true)
+    {:noreply, state}
+  end
+
+  def handle_cast(:help, state) do
+    send_message("""
+      Commands
+      ==============================================================
+      !info !help !play !playlist !pause !unpause !skip !clear
+      """
+    )
     {:noreply, state}
   end
 

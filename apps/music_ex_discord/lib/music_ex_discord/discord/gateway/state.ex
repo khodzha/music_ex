@@ -201,6 +201,17 @@ defmodule MusicExDiscord.Discord.Gateway.State do
     {:noreply, state}
   end
 
+  def handle_cast({:new_message, %{"content" => "!info"}}, state) do
+    player_pid = GuildLookup.find_player(state)
+    Player.help(player_pid)
+    {:noreply, state}
+  end
+  def handle_cast({:new_message, %{"content" => "!help"}}, state) do
+    player_pid = GuildLookup.find_player(state)
+    Player.help(player_pid)
+    {:noreply, state}
+  end
+
   def handle_cast({:new_message, _message}, state) do
     {:noreply, state}
   end

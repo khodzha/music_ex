@@ -39,7 +39,7 @@ defmodule MusicExDiscord.Gateway.Supervisor do
       {MusicExDiscord.Discord.Gateway, [guild.guild_id]},
     ]
 
-    Supervisor.init(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_all)
   end
 
   defp find_child(guild_id, module) do
